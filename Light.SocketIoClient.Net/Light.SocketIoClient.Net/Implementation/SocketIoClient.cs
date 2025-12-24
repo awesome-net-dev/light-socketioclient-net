@@ -202,7 +202,7 @@ internal sealed class SocketIoClient : ISocketIoClient
 
     private async Task HandleIncomingMessage(int msgType, ReadOnlyMemory<byte> payload, CancellationToken ct)
     {
-        if (msgType == SocketIoMessages.Session)
+        if (msgType == SocketIoMessages.Open)
             return;
 
         if (msgType == SocketIoMessages.Ping)
@@ -212,9 +212,6 @@ internal sealed class SocketIoClient : ISocketIoClient
         }
 
         if (msgType == SocketIoMessages.Pong)
-            return;
-
-        if (msgType == SocketIoMessages.Open)
             return;
 
         if (msgType == SocketIoMessages.Connect)
