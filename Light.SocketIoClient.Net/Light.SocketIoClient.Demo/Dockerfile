@@ -11,19 +11,19 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Light.SocketIoClient.Net/Light.SocketIoClient.Net.csproj", "Light.SocketIoClient.Net/"]
-RUN dotnet restore "./Light.SocketIoClient.Net/Light.SocketIoClient.Net.csproj"
+COPY ["Light.SocketIoClient.Demo/Light.SocketIoClient.Demo.csproj", "Light.SocketIoClient.Demo/"]
+RUN dotnet restore "./Light.SocketIoClient.Demo/Light.SocketIoClient.Demo.csproj"
 COPY . .
-WORKDIR "/src/Light.SocketIoClient.Net"
-RUN dotnet build "./Light.SocketIoClient.Net.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/Light.SocketIoClient.Demo"
+RUN dotnet build "./Light.SocketIoClient.Demo.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Light.SocketIoClient.Net.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./Light.SocketIoClient.Demo.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Light.SocketIoClient.Net.dll"]
+ENTRYPOINT ["dotnet", "Light.SocketIoClient.Demo.dll"]
