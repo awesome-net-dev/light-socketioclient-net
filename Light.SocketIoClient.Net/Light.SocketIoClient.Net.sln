@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36623.8 d17.14
+VisualStudioVersion = 17.14.36623.8
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Light.SocketIoClient.Net", "Light.SocketIoClient.Net\Light.SocketIoClient.Net.csproj", "{E765CE32-1336-49F4-B86E-C42EFA21ED3C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Light.SocketIoClient.Demo", "Light.SocketIoClient.Demo\Light.SocketIoClient.Demo.csproj", "{E765CE32-1336-49F4-B86E-C42EFA21ED3C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Light.SocketIoClient.Net", "Light.SocketIoClient.Net\Light.SocketIoClient.Net.csproj", "{8F175643-DB57-4525-B7A2-8B3F99E7D3F1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{E765CE32-1336-49F4-B86E-C42EFA21ED3C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E765CE32-1336-49F4-B86E-C42EFA21ED3C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E765CE32-1336-49F4-B86E-C42EFA21ED3C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F175643-DB57-4525-B7A2-8B3F99E7D3F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F175643-DB57-4525-B7A2-8B3F99E7D3F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F175643-DB57-4525-B7A2-8B3F99E7D3F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F175643-DB57-4525-B7A2-8B3F99E7D3F1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

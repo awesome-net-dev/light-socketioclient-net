@@ -1,9 +1,14 @@
+using Light.SocketIoClient.Demo;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddSingleton<ISocketClientsSentinel, SocketClientsSentinel>();
+builder.Services.AddHostedService<ISocketClientsSentinel>(sp => sp.GetRequiredService<ISocketClientsSentinel>());
 
 var app = builder.Build();
 
