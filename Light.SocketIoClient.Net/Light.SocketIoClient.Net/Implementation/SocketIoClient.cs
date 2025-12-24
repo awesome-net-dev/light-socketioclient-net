@@ -11,17 +11,13 @@ namespace Light.SocketIoClient.Net.Implementation;
 
 internal sealed class SocketIoClient : ISocketIoClient
 {
-    private readonly SocketClientOptions _options;
     private const string AuthHeaderName = "Authorization";
 
     private readonly Dictionary<string, Func<JsonElement, Task>> _receiveHandlers = new();
-    private readonly Pipe _pipe = new(new PipeOptions(
-        pauseWriterThreshold: 64 * 1024,
-        resumeWriterThreshold: 32 * 1024,
-        useSynchronizationContext: false
-    ));
-
     private readonly Channel<ReadOnlyMemory<byte>> _sendChannel;
+    private readonly Pipe _pipe;
+    private readonly SocketClientOptions _options;
+
     private ClientWebSocket? _client;
     private Task? _receiveLoop;
     private Task? _parseLoop;
@@ -37,10 +33,16 @@ internal sealed class SocketIoClient : ISocketIoClient
             AllowSynchronousContinuations = false, 
             FullMode = BoundedChannelFullMode.Wait
         });
+        _pipe = new Pipe(new PipeOptions(
+            pauseWriterThreshold: _options.PauseWriterThreshold,
+            resumeWriterThreshold: _options.ResumeWriterThreshold,
+            useSynchronizationContext: false
+        ));
     }
 
     #region Implementation of ISocketIoClient
 
+    public event EventHandler? SocketConnected;
     public event EventHandler? Connected;
     public event EventHandler<DisconnectedEventArgs>? Disconnected;
 
@@ -62,10 +64,10 @@ internal sealed class SocketIoClient : ISocketIoClient
         if (_client.State == WebSocketState.Open && _client.HttpStatusCode == HttpStatusCode.SwitchingProtocols)
         {
             _receiveLoop = Task.Run(() => ReceiveLoop(_client, cancellationToken), cancellationToken).ContinueWith(t =>
-                {
-                    if (t.IsFaulted)
-                        Disconnected?.Invoke(this, new DisconnectedEventArgs(DisconnectReason.ReceiveFail, t.Exception));
-                });
+            {
+                if (t.IsFaulted)
+                    Disconnected?.Invoke(this, new DisconnectedEventArgs(DisconnectReason.ReceiveFail, t.Exception));
+            });
             _parseLoop = Task.Run(() => ParseLoop(cancellationToken), cancellationToken).ContinueWith(t =>
             {
                 if (t.IsFaulted)
@@ -82,7 +84,7 @@ internal sealed class SocketIoClient : ISocketIoClient
             throw new HttpListenerException(101, $"Expected '101' but received '{_client.HttpStatusCode:D}'");
         }
 
-        Connected?.Invoke(this, EventArgs.Empty);
+        SocketConnected?.Invoke(this, EventArgs.Empty);
     }
 
     public void On(string eventName, Func<JsonElement, Task> handler)
@@ -155,6 +157,7 @@ internal sealed class SocketIoClient : ISocketIoClient
 
     private async Task ReceiveLoop(ClientWebSocket socket, CancellationToken ct)
     {
+        var msgBoundary = new ReadOnlyMemory<byte>([0x00]);
         while (socket.State == WebSocketState.Open && !ct.IsCancellationRequested)
         {
             var memory = _pipe.Writer.GetMemory(_options.ReceiveMemoryBufferSizeHint);
@@ -163,6 +166,11 @@ internal sealed class SocketIoClient : ISocketIoClient
                 break;
 
             _pipe.Writer.Advance(result.Count);
+
+            if (!result.EndOfMessage)
+                continue;
+
+            await _pipe.Writer.WriteAsync(msgBoundary, ct);
 
             var flush = await _pipe.Writer.FlushAsync(ct);
             if (flush.IsCompleted)
@@ -194,19 +202,34 @@ internal sealed class SocketIoClient : ISocketIoClient
 
     private async Task HandleIncomingMessage(int msgType, ReadOnlyMemory<byte> payload, CancellationToken ct)
     {
-        if (msgType == 50) // ping
+        if (msgType == SocketIoMessages.Session)
+            return;
+
+        if (msgType == SocketIoMessages.Ping)
         {
             await SendPong(ct);
             return;
         }
 
-        if (msgType == 51 // pong
-            || msgType == 48 // opened
-            || msgType == 40 // connect
-            || msgType == 41) // disconnect
+        if (msgType == SocketIoMessages.Pong)
             return;
 
-        if (msgType != 42) // event
+        if (msgType == SocketIoMessages.Open)
+            return;
+
+        if (msgType == SocketIoMessages.Connect)
+        {
+            Connected?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        if (msgType == SocketIoMessages.Disconnect)
+        {
+            Disconnected?.Invoke(this, new DisconnectedEventArgs(DisconnectReason.Server));
+            return;
+        }
+
+        if (msgType != SocketIoMessages.Event)
             return;
 
         using var json = JsonDocument.Parse(payload);
@@ -231,14 +254,16 @@ internal sealed class SocketIoClient : ISocketIoClient
 
     private static bool TryReadFrame(ref ReadOnlySequence<byte> buffer, out ReadOnlyMemory<byte> frame)
     {
-        if (buffer.IsEmpty)
+        // messages end with 0x00
+        var position = buffer.PositionOf((byte)0x00);
+        if (position == null)
         {
             frame = default;
             return false;
         }
 
-        frame = buffer.IsSingleSegment ? buffer.First : buffer.ToArray();
-        buffer = buffer.Slice(buffer.End);
+        frame = buffer.Slice(0, position.Value).ToArray();
+        buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
         return true;
     }
 
@@ -266,6 +291,8 @@ internal sealed class SocketIoClient : ISocketIoClient
             payload = default;
         else
             payload = message[prefixLength..];
+        
+        System.Diagnostics.Debug.WriteLine($"new msg: {msgType}, {System.Text.Encoding.UTF8.GetString(payload.ToArray())}");
         return true;
     }
 

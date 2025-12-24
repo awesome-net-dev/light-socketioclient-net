@@ -15,6 +15,7 @@ public class SocketClientWrapper
         _socketClientsSentinel = socketClientsSentinel;
         _logger = logger;
 
+        _client.SocketConnected += OnClientSocketConnected;
         _client.Connected += OnClientConnected;
         _client.Disconnected += OnClientDisconnected;
     }
@@ -48,6 +49,11 @@ public class SocketClientWrapper
         }
     }
 
+    private void OnClientSocketConnected(object? sender, EventArgs e)
+    {
+        _logger.LogInformation("Socket connected");
+    }
+
     private void OnClientConnected(object? sender, EventArgs e)
     {
         _logger.LogInformation("Client connected");
@@ -60,6 +66,7 @@ public class SocketClientWrapper
         switch (e.Reason)
         {
             case DisconnectReason.User:
+            case DisconnectReason.Server:
                 return;
             case DisconnectReason.ReceiveFail:
             case DisconnectReason.ParseFail:

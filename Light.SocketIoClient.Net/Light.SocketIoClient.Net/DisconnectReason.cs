@@ -4,6 +4,7 @@ public enum DisconnectReason
 {
     ReceiveFail,
     ParseFail,
+    SendFail,
     User,
-    SendFail
+    Server
 }

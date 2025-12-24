@@ -7,4 +7,7 @@ public sealed class SocketClientOptions
 
     public int ReceiveMemoryBufferSizeHint { get; set; } = 8128;
     public int SendMemoryBufferCapacity { get; set; } = 1000;
+    
+    public int PauseWriterThreshold { get; set; } = 64 * 1024;
+    public int ResumeWriterThreshold { get; set; } = 32 * 1024;
 }

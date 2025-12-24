@@ -2,9 +2,9 @@
 
 namespace Light.SocketIoClient.Net.DependencyInjection;
 
-internal static class ServicesCollectionExtensions
+public static class ServicesCollectionExtensions
 {
-    public static void AddSocketClient(IServiceCollection serviceCollection)
+    public static void AddSocketClient(this IServiceCollection serviceCollection)
     {
         serviceCollection.AddTransient<ISocketIoClient, Implementation.SocketIoClient>();
     }

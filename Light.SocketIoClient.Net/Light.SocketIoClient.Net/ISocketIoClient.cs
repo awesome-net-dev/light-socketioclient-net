@@ -4,6 +4,7 @@ namespace Light.SocketIoClient.Net;
 
 public interface ISocketIoClient
 {
+    event EventHandler SocketConnected;
     event EventHandler Connected;
     event EventHandler<DisconnectedEventArgs> Disconnected;
 
