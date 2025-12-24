@@ -1,0 +1,6 @@
+@Light.SocketIoClient.Net_HostAddress = http://localhost:5096
+
+GET {{Light.SocketIoClient.Net_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
