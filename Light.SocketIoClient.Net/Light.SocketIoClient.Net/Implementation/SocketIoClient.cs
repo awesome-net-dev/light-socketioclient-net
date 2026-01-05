@@ -11,8 +11,6 @@ namespace Light.SocketIoClient.Net.Implementation;
 
 internal sealed class SocketIoClient : ISocketIoClient
 {
-    private const string AuthHeaderName = "Authorization";
-
     private readonly Dictionary<string, Func<JsonElement, Task>> _receiveHandlers = new();
     private readonly Channel<ReadOnlyMemory<byte>> _sendChannel;
     private readonly Pipe _pipe;
@@ -63,9 +61,15 @@ internal sealed class SocketIoClient : ISocketIoClient
         _client = new ClientWebSocket();
         _client.Options.CollectHttpResponseDetails = true;
 
-        if (!string.IsNullOrWhiteSpace(_options.Auth))
-            _client.Options.SetRequestHeader(AuthHeaderName, _options.Auth);
-
+        if (_options.Headers.HasKeys())
+        {
+            foreach (var headerName in _options.Headers.AllKeys)
+            {
+                if (!string.IsNullOrWhiteSpace(headerName))
+                    _client.Options.SetRequestHeader(headerName, _options.Headers[headerName]);
+            }
+        }
+        
         try
         {
             await _client.ConnectAsync(_options.BroadcastUri, cancellationToken);

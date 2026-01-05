@@ -1,9 +1,11 @@
-﻿namespace Light.SocketIoClient.Net.Options;
+﻿using System.Collections.Specialized;
+
+namespace Light.SocketIoClient.Net.Options;
 
 public sealed record SocketClientOptions
 {
     public required Uri BroadcastUri { get; init; }
-    public string? Auth { get; init; }
+    public NameValueCollection Headers { get; init; } = new();
 
     public int ReceiveMemoryBufferSizeHint { get; init; } = 8128;
     public int SendMemoryBufferCapacity { get; init; } = 1000;
