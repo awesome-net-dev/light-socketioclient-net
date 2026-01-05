@@ -123,6 +123,20 @@ internal sealed class SocketIoClient : ISocketIoClient
 
     #endregion // Implementation of ISocketIoClient
 
+    #region Implementation of IDisposable
+
+    public void Dispose()
+    {
+        _receiveHandlers.Clear();
+        _sendChannel.Writer.TryComplete();
+        _pipe.Writer.Complete();
+        _pipe.Reader.Complete();
+
+        DisposeClient();
+    }
+
+    #endregion // Implementation of IDisposable
+
     private void DisposeClient()
     {
         var client = _client;

@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace Light.SocketIoClient.Net;
 
-public interface ISocketIoClient
+public interface ISocketIoClient : IDisposable
 {
     event EventHandler Connected;
     event EventHandler<DisconnectedEventArgs> Disconnected;
