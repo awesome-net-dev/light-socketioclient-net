@@ -1,4 +1,5 @@
-﻿using Light.SocketIoClient.Net;
+﻿using System.Text.Json;
+using Light.SocketIoClient.Net;
 
 namespace Light.SocketIoClient.Demo;
 
@@ -23,17 +24,20 @@ public class SocketClientWrapper
     public int FailedConnects => _failedConnectAttempts;
     public bool Connected => _client.IsConnected;
 
-    public async Task Connect(CancellationToken cancellationToken)
+    public async Task<bool> Connect(CancellationToken cancellationToken)
     {
 		try
 		{
+            _client.On("error", OnErrorHandler);
 			await _client.Connect(cancellationToken);
             Interlocked.Exchange(ref _failedConnectAttempts, 0);
+            return _client.IsConnected;
         }
 		catch (Exception ex)
         {
             Interlocked.Increment(ref _failedConnectAttempts);
             _logger.LogError(ex, "connection error");
+            return false;
         }
     }
 
@@ -75,5 +79,11 @@ public class SocketClientWrapper
                 _socketClientsSentinel.Reconnect(this);
                 break;
         }
+    }
+
+    private Task OnErrorHandler(JsonElement details)
+    {
+        _logger.LogError(details.ToString());
+        return Task.CompletedTask;
     }
 }
