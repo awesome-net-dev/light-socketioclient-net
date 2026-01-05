@@ -23,14 +23,20 @@ internal sealed class SocketIoClient : ISocketIoClient
     private Task? _parseLoop;
     private Task? _sendLoop;
 
-    public SocketIoClient(IOptions<SocketClientOptions> clientOptions)
+    public SocketIoClient(IOptions<SocketClientOptions> options)
+        : this(options.Value)
     {
-        _options = clientOptions.Value;
+
+    }
+
+    internal SocketIoClient(SocketClientOptions clientOptions)
+    {
+        _options = clientOptions;
         _sendChannel = Channel.CreateBounded<ReadOnlyMemory<byte>>(new BoundedChannelOptions(_options.SendMemoryBufferCapacity)
         {
-            SingleReader = true, 
-            SingleWriter = false, 
-            AllowSynchronousContinuations = false, 
+            SingleReader = true,
+            SingleWriter = false,
+            AllowSynchronousContinuations = false,
             FullMode = BoundedChannelFullMode.Wait
         });
         _pipe = new Pipe(new PipeOptions(
@@ -42,9 +48,10 @@ internal sealed class SocketIoClient : ISocketIoClient
 
     #region Implementation of ISocketIoClient
 
-    public event EventHandler? SocketConnected;
     public event EventHandler? Connected;
     public event EventHandler<DisconnectedEventArgs>? Disconnected;
+
+    public SocketClientOptions Options => _options;
 
     public bool IsConnected => _client?.State == WebSocketState.Open;
 
@@ -59,32 +66,29 @@ internal sealed class SocketIoClient : ISocketIoClient
         if (!string.IsNullOrWhiteSpace(_options.Auth))
             _client.Options.SetRequestHeader(AuthHeaderName, _options.Auth);
 
-        await _client.ConnectAsync(_options.BroadcastUri, cancellationToken);
+        try
+        {
+            await _client.ConnectAsync(_options.BroadcastUri, cancellationToken);
+        }
+        catch
+        {
+            DisposeClient();
+            throw;
+        }
 
         if (_client.State == WebSocketState.Open && _client.HttpStatusCode == HttpStatusCode.SwitchingProtocols)
         {
-            _receiveLoop = Task.Run(() => ReceiveLoop(_client, cancellationToken), cancellationToken).ContinueWith(t =>
-            {
-                if (t.IsFaulted)
-                    Disconnected?.Invoke(this, new DisconnectedEventArgs(DisconnectReason.ReceiveFail, t.Exception));
-            });
-            _parseLoop = Task.Run(() => ParseLoop(cancellationToken), cancellationToken).ContinueWith(t =>
-            {
-                if (t.IsFaulted)
-                    Disconnected?.Invoke(this, new DisconnectedEventArgs(DisconnectReason.ParseFail, t.Exception));
-            });
-            _sendLoop = Task.Run(() => SendLoop(_client, cancellationToken), cancellationToken).ContinueWith(t =>
-            {
-                if (t.IsFaulted)
-                    Disconnected?.Invoke(this, new DisconnectedEventArgs(DisconnectReason.SendFail, t.Exception));
-            });
+            _receiveLoop = Task.Run(() => ReceiveLoop(_client, cancellationToken), cancellationToken)
+                .ContinueWith(t => HandleFailedTask(t, DisconnectReason.ReceiveFail), CancellationToken.None);
+            _parseLoop = Task.Run(() => ParseLoop(cancellationToken), cancellationToken)
+                .ContinueWith(t => HandleFailedTask(t, DisconnectReason.ParseFail), CancellationToken.None);
+            _sendLoop = Task.Run(() => SendLoop(_client, cancellationToken), cancellationToken)
+                .ContinueWith(t => HandleFailedTask(t, DisconnectReason.SendFail), CancellationToken.None);
         }
         else
         {
             throw new HttpListenerException(101, $"Expected '101' but received '{_client.HttpStatusCode:D}'");
         }
-
-        SocketConnected?.Invoke(this, EventArgs.Empty);
     }
 
     public void On(string eventName, Func<JsonElement, Task> handler)
@@ -110,7 +114,7 @@ internal sealed class SocketIoClient : ISocketIoClient
             await client.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnect", CancellationToken.None);
 
         DisposeClient();
-        Disconnected?.Invoke(this, new DisconnectedEventArgs(DisconnectReason.User));
+        FireDisconnectedEvent(DisconnectReason.User);
     }
 
     #endregion // Implementation of ISocketIoClient
@@ -136,9 +140,14 @@ internal sealed class SocketIoClient : ISocketIoClient
             _client = null;
         }
 
-        _receiveLoop?.Dispose();
-        _parseLoop?.Dispose();
-        _sendLoop?.Dispose();
+        if (_receiveLoop?.IsCompleted == true)
+            _receiveLoop.Dispose();
+
+        if (_parseLoop?.IsCompleted == true)
+            _parseLoop.Dispose();
+
+        if (_sendLoop?.IsCompleted == true)
+            _sendLoop.Dispose();
     }
 
     private async Task SendLoop(ClientWebSocket socket, CancellationToken ct)
@@ -222,7 +231,7 @@ internal sealed class SocketIoClient : ISocketIoClient
 
         if (msgType == SocketIoMessages.Disconnect)
         {
-            Disconnected?.Invoke(this, new DisconnectedEventArgs(DisconnectReason.Server));
+            FireDisconnectedEvent(DisconnectReason.Server);
             return;
         }
 
@@ -247,6 +256,20 @@ internal sealed class SocketIoClient : ISocketIoClient
 
         var data = element!.Value;
         return handler.Invoke(data);
+    }
+
+    private void HandleFailedTask(Task t, DisconnectReason reason)
+    {
+        if (!t.IsFaulted)
+            return;
+
+        DisposeClient();
+        FireDisconnectedEvent(reason, t.Exception);
+    }
+
+    private void FireDisconnectedEvent(DisconnectReason reason, Exception? ex = null, string? description = null)
+    {
+        Disconnected?.Invoke(this, new DisconnectedEventArgs(reason, ex, description));
     }
 
     private static bool TryReadFrame(ref ReadOnlySequence<byte> buffer, out ReadOnlyMemory<byte> frame)
@@ -288,7 +311,7 @@ internal sealed class SocketIoClient : ISocketIoClient
             payload = default;
         else
             payload = message[prefixLength..];
-        
+
         System.Diagnostics.Debug.WriteLine($"new msg: {msgType}, {System.Text.Encoding.UTF8.GetString(payload.ToArray())}");
         return true;
     }

@@ -1,13 +1,13 @@
 ﻿namespace Light.SocketIoClient.Net.Options;
 
-public sealed class SocketClientOptions
+public sealed record SocketClientOptions
 {
-    public required Uri BroadcastUri { get; set; }
-    public string? Auth { get; set; }
+    public required Uri BroadcastUri { get; init; }
+    public string? Auth { get; init; }
 
-    public int ReceiveMemoryBufferSizeHint { get; set; } = 8128;
-    public int SendMemoryBufferCapacity { get; set; } = 1000;
+    public int ReceiveMemoryBufferSizeHint { get; init; } = 8128;
+    public int SendMemoryBufferCapacity { get; init; } = 1000;
     
-    public int PauseWriterThreshold { get; set; } = 64 * 1024;
-    public int ResumeWriterThreshold { get; set; } = 32 * 1024;
+    public int PauseWriterThreshold { get; init; } = 64 * 1024;
+    public int ResumeWriterThreshold { get; init; } = 32 * 1024;
 }
