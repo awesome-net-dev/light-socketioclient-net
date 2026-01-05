@@ -4,6 +4,13 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+	<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+	<PackageId>Light.SocketIoClient.Net</PackageId>
+	<Version>1.0.0</Version>
+	<Authors>awesome-net-dev</Authors>
+	<Description>Lightweight socket client using socketIo protocol (eio=4)</Description>
+	<PackageLicenseExpression>Apache 2.0</PackageLicenseExpression>
+	<RepositoryUrl>https://github.com/awesome-net-dev/light-socketioclient-net</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
