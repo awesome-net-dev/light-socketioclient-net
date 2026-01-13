@@ -6,6 +6,8 @@ namespace Light.SocketIoClient.Net;
 public interface ISocketIoClient : IDisposable
 {
     event EventHandler Connected;
+    event EventHandler Ping;
+    event EventHandler Pong;
     event EventHandler<DisconnectedEventArgs> Disconnected;
 
     SocketClientOptions Options { get; }

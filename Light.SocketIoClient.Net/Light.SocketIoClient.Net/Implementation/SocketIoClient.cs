@@ -47,6 +47,8 @@ internal sealed class SocketIoClient : ISocketIoClient
     #region Implementation of ISocketIoClient
 
     public event EventHandler? Connected;
+    public event EventHandler? Ping;
+    public event EventHandler? Pong;
     public event EventHandler<DisconnectedEventArgs>? Disconnected;
 
     public SocketClientOptions Options => _options;
@@ -235,11 +237,15 @@ internal sealed class SocketIoClient : ISocketIoClient
         if (msgType == SocketIoMessages.Ping)
         {
             await SendPong(ct);
+            Ping?.Invoke(this, EventArgs.Empty);
             return;
         }
 
         if (msgType == SocketIoMessages.Pong)
+        {
+            Pong?.Invoke(this, EventArgs.Empty);
             return;
+        }
 
         if (msgType == SocketIoMessages.Connect)
         {
