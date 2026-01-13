@@ -14,6 +14,6 @@ public interface ISocketIoClient : IDisposable
     bool IsConnected { get; }
     Task Connect(CancellationToken cancellationToken);
     void On(string eventName, Func<JsonElement, Task> handler);
-    ValueTask Send(string eventName, JsonElement payload);
+    ValueTask Send(string eventName, JsonElement payload, CancellationToken cancellationToken);
     Task Disconnect();
 }

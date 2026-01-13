@@ -102,7 +102,7 @@ internal sealed class SocketIoClient : ISocketIoClient
         _receiveHandlers[eventName] = handler;
     }
 
-    public ValueTask Send(string eventName, JsonElement payload)
+    public ValueTask Send(string eventName, JsonElement payload, CancellationToken cancellationToken)
     {
         var payloadBytes = JsonSerializer.SerializeToUtf8Bytes(new object[] { eventName, payload });
         var msgType = "42"u8;
@@ -110,7 +110,7 @@ internal sealed class SocketIoClient : ISocketIoClient
         msgType.CopyTo(message);
         payloadBytes.CopyTo(message, msgType.Length);
 
-        return _sendChannel.Writer.WriteAsync(message);
+        return _sendChannel.Writer.WriteAsync(message, cancellationToken);
     }
 
     public async Task Disconnect()
